@@ -8,7 +8,7 @@
     "format": "npx prettier --check \"**/*.js\"",
     "format:fix": "npx prettier --write \"**/*.js\"",
     "test": "npx jest --coverage",
-    "build": "D:/tools/node-v22.19.0-win-x64/node.exe build.js"
+    "build": "node -e \"require('fs').mkdirSync('build',{recursive:true}); require('fs').writeFileSync('build/index.html','<h1>Hello CI/CD</h1>'); console.log('Building application...');\""
   },
   "repository": {
     "type": "git",
