@@ -23,8 +23,13 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Set Git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist   # change this if your build output folder is different
+          publish_dir: ./dist   # change this if your build folder is named differently
