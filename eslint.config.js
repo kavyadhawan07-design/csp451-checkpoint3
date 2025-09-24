@@ -6,7 +6,7 @@ export default defineConfig([
     rules: {
       semi: "error",
       "prefer-const": "error",
-      "no-unused-vars": "warn"
-    }
-  }
+      "no-unused-vars": "warn",
+    },
+  },
 ]);
