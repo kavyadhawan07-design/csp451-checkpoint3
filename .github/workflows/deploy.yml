@@ -13,34 +13,60 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 
+# ✅ Env vars (for the assignment) — optional BUILD_DIR hint
 env:
   NODE_ENV: production
-  BUILD_DIR: dist
-  AUTHOR_NAME: "Kavya Dhawan"
-  REPO_NAME: "csp451-checkpoint3"
+  BUILD_DIR: dist   # will be used ONLY if this folder actually exists
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install dependencies
+      - name: Install deps
         run: npm ci || npm install
 
-      - name: Build project
-        run: npm run build
+      # Only run build if a "build" script exists
+      - name: Build (if script exists)
+        run: |
+          if npm run | grep -qE "^\s*build\s"; then
+            echo "Running npm run build…"
+            npm run build
+          else
+            echo "No build script found, skipping build."
+          fi
 
-      - name: Upload GitHub Pages artifact
+      # ✅ Decide what to publish:
+      # 1) If $BUILD_DIR env var points to an existing dir -> use it
+      # 2) else if dist/ exists -> use dist
+      # 3) else if build/ exists -> use build
+      # 4) else publish repo root .
+      - name: Detect output path
+        id: detect
+        run: |
+          if [ -n "${BUILD_DIR}" ] && [ -d "${BUILD_DIR}" ]; then
+            out="${BUILD_DIR}"
+          elif [ -d "dist" ]; then
+            out="dist"
+          elif [ -d "build" ]; then
+            out="build"
+          else
+            out="."
+          fi
+          echo "out=$out" >> "$GITHUB_OUTPUT"
+          echo "Using output folder: $out"
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ env.BUILD_DIR }}
+          path: ${{ steps.detect.outputs.out }}
 
   deploy:
     needs: build
@@ -48,7 +74,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
