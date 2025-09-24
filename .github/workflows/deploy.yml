@@ -2,11 +2,11 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]   # runs when you push to main branch
+    branches: [main]
 
 permissions:
   contents: read
-  pages: write         # gives permission to deploy to Pages
+  pages: write
   id-token: write
 
 concurrency:
@@ -17,25 +17,44 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install dependencies
+      - name: Install deps
         run: npm ci || npm install
 
-      - name: Build project
-        run: npm run build
+      # Only run build if a "build" script exists
+      - name: Build (if script exists)
+        run: |
+          if npm run | grep -qE "^\s*build\s"; then
+            echo "Running npm run build…"
+            npm run build
+          else
+            echo "No build script found, skipping."
+          fi
 
-      # Upload build folder (replace dist with your actual output folder)
-      - name: Upload GitHub Pages artifact
+      # Detect output folder: dist -> build -> root
+      - name: Detect output path
+        id: detect
+        run: |
+          if [ -d "dist" ]; then
+            echo "out=dist" >> $GITHUB_OUTPUT
+          elif [ -d "build" ]; then
+            echo "out=build" >> $GITHUB_OUTPUT
+          else
+            echo "out=." >> $GITHUB_OUTPUT
+          fi
+          echo "Using output: $(cat $GITHUB_OUTPUT)"
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ${{ steps.detect.outputs.out }}
 
   deploy:
     needs: build
@@ -43,7 +62,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
