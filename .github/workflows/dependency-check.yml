@@ -1,0 +1,40 @@
+name: Daily Dependency & Security Check
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # Runs daily at midnight UTC
+  workflow_dispatch:      # (Optional) allows manual trigger
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run security audit
+        run: npm audit --json > audit-results.json
+
+      - name: Check for vulnerabilities
+        id: check_vulnerabilities
+        run: |
+          critical=$(jq '.metadata.vulnerabilities.critical' audit-results.json)
+          high=$(jq '.metadata.vulnerabilities.high' audit-results.json)
+          echo "critical=$critical" >> $GITHUB_OUTPUT
+          echo "high=$high" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub issue if vulnerabilities found
+        if: ${{ steps.check_vulnerabilities.outputs.critical != '0' || steps.check_vulnerabilities.outputs.high != '0' }}
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "⚠️ Security vulnerabilities detected"
+          content-filepath: audit-results.json
+          labels: security
